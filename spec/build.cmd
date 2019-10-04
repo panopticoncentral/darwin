@@ -1,0 +1,1 @@
+..\tools\SpecGen\SpecGen "Darwin Language Specification.xml" "Darwin Language Specification (Word).xml" "Darwin Language Specification.md"
