@@ -55,7 +55,7 @@ A production contains a set of sequential *terms*. A term can be one of the foll
 
 * **A range.** A range of character values can be specified by separating them with two dots (".."). 
 
-Terms can be modified with the repetition operators "?", "+", and "*". The operator "?" indicates a term is optional and can appear zero or one times. The operator "+" indicates a term must appear one or more times. And the operator "*" indicates a term may appear zero or more times. 
+Terms can be modified with the repetition operators "?", "+", and "\*". The operator "?" indicates a term is optional and can appear zero or one times. The operator "+" indicates a term must appear one or more times. And the operator "\*" indicates a term may appear zero or more times. 
 
 > **Note:** The grammars in this specification are not intended to be formal grammars (that is, usable by any particular parser or lexer generator). 
 
@@ -65,7 +65,7 @@ Terms can be modified with the repetition operators "?", "+", and "*". The opera
 
 The first step in processing Darwin code is to translate a stream of Unicode characters into an ordered set of lexical tokens. 
 
-> **Note:** All references to "Unicode" in this specification refer to Unicode version 9.0. 
+> **Note:** All references to "Unicode" in this specification refer to Unicode version 8.0. 
 
 ```antlr
 start
@@ -115,7 +115,7 @@ comment-element
 
 ## <a name="2.3"></a>2.3 Identifiers
 
-An *identifier* is a name. Darwin identifiers conform to the Unicode Standard Annex 31, version 9.0. The language includes the following requirements from that specification: 
+An *identifier* is a name. Darwin identifiers conform to the Unicode Standard Annex 31. The language includes the following requirements from that specification: 
 
 * **UAX31-R1**: Darwin specifies a profile that includes the underscore (`_`) character in the `Start` set. It also removes the `Other_ID_Start` characters from `Start` and `Other_ID_Continue` characters from `Continue`, as backwards compatibility with previous Unicode specifications is not a concern. 
 
@@ -172,7 +172,9 @@ literal
 
 ### <a name="2.4.1"></a>2.4.1 Integer Literals
 
-An *integer literal* is a textual representation of an integral numeric value. Integer literals can either be specified in decimal (base 10) or hexadecimal (base 16) notation. Hexadecimal notation is prefixed by `0x` and uses the letters `a` through `f` to represent the additional digit values. 
+An *integer literal* is a textual representation of an integral numeric value. Integer literals can either be specified in decimal (base 10) or hexadecimal (base 16) notation. Hexadecimal notation is prefixed by `0x` and uses the letters `a` through `f` to represent the additional digit values.
+
+Decimal notation may be followed by a *unit suffix* that specifies the units of the decimal value. No intrinsic meaning is assigned to unit suffixes at the lexical level.
 
 ```antlr
 integer-literal
@@ -181,11 +183,20 @@ integer-literal
   ;
 
 decimal-literal
-  : digit+
+  : digit+ unit-suffix?
   ;
 
 digit
   : '0'..'9'
+  ;
+
+unit-suffix
+  : unit-suffix-character+
+  ;
+
+unit-suffix-character
+  : 'a'..'z'
+  | 'A'..'Z'
   ;
 
 hexadecimal-literal
@@ -201,12 +212,12 @@ hexadecimal-digit
 
 ### <a name="2.4.2"></a>2.4.2 Floating-Point Literals
 
-A *floating-point literal* is a textual representation of a real numeric value. 
+A *floating-point literal* is a textual representation of a real numeric value. Floating point literals may also have unit suffixes.
 
 ```antlr
 floating-point-literal
-  : digit+ '.' digit+ exponent?
-  | digit+ exponent
+  : digit+ '.' digit+ exponent? unit-suffix?
+  | digit+ exponent unit-suffix?
   ;
 
 exponent
@@ -246,7 +257,7 @@ string-literal-character
   ;
 
 string-literal-hole
-  
+  : '${' token+ '}'
   ;
 ```
 
@@ -272,7 +283,7 @@ domain-specific-literal-character
   ;
 
 domain-specific-literal-hole
-  
+  : '${' token+ '}'
   ;
 ```
 
@@ -328,4 +339,3 @@ operators
 ```
 
 <br/>
-
