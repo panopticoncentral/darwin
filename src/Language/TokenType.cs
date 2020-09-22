@@ -15,6 +15,9 @@
         OpenBrace,
         CloseBrace,
         OpenBracket,
-        CloseBracket
+        CloseBracket,
+        Operator,
+        Identifier,
+        HexLiteral
     }
 }

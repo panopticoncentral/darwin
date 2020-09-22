@@ -41,5 +41,31 @@ namespace Darwin.Language.UnitTests
             new Token(TokenType.CloseBracket, 8..9),
             new Token(TokenType.EndOfText, 9..9)
         });
+
+        [Fact]
+        public void Operators() => Assert.Equal(GetAllTokens("+ - ++ -- ~!@$%^&*-+=\\|<>.?/"), new[]
+        {
+            new Token(TokenType.Operator, 0..1),
+            new Token(TokenType.Whitespace, 1..2),
+            new Token(TokenType.Operator, 2..3),
+            new Token(TokenType.Whitespace, 3..4),
+            new Token(TokenType.Operator, 4..6),
+            new Token(TokenType.Whitespace, 6..7),
+            new Token(TokenType.Operator, 7..9),
+            new Token(TokenType.Whitespace, 9..10),
+            new Token(TokenType.Operator, 10..28),
+            new Token(TokenType.EndOfText, 28..28)
+        });
+
+        [Fact]
+        public void Identifiers() => Assert.Equal(GetAllTokens("abc abc123 _abc"), new[]
+        {
+            new Token(TokenType.Identifier, 0..3),
+            new Token(TokenType.Whitespace, 3..4),
+            new Token(TokenType.Identifier, 4..10),
+            new Token(TokenType.Whitespace, 10..11),
+            new Token(TokenType.Identifier, 11..15),
+            new Token(TokenType.EndOfText, 15..15)
+        });
     }
 }

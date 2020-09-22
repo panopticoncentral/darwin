@@ -1,239 +1,281 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+using System.Globalization;
 
 namespace Darwin.Language
 {
     internal static class Scanner
     {
         // Optimize the ASCII range values
-        public static bool IsWhitespace(char ch)
-        {
-            return ch == ' '
-                || ch == '\t'
-                || ch == '\v'
-                || ch == '\f'
-                || (ch > 127 && char.IsWhiteSpace(ch));
-        }
+        public static bool IsWhitespace(char ch) =>
+            ch == ' '
+            || ch == '\t'
+            || ch == '\v'
+            || ch == '\f'
+            || (ch > 127 && char.IsWhiteSpace(ch));
 
         public static bool IsNewLine(char ch) => ch == '\r' || ch == '\n';
 
-        private static Token ScanWhitespace(ReadOnlySpan<char> text, int offset)
-        {
-            var start = offset;
+        public static bool IsOperator(char ch) =>
+            ch == '~'
+            || ch == '!'
+            || ch == '@'
+            || ch == '$'
+            || ch == '%'
+            || ch == '^'
+            || ch == '&'
+            || ch == '*'
+            || ch == '-'
+            || ch == '+'
+            || ch == '='
+            || ch == '|'
+            || ch == '\\'
+            || ch == '<'
+            || ch == '>'
+            || ch == '.'
+            || ch == '/'
+            || ch == '?';
 
-            while (offset < text.Length && IsWhitespace(text[offset]))
+        public static bool IsIdentifierStartCharacter(char ch) =>
+            ch == '_'
+            || char.GetUnicodeCategory(ch) switch
             {
-                offset++;
+                UnicodeCategory.UppercaseLetter => true,
+                UnicodeCategory.LowercaseLetter => true,
+                UnicodeCategory.TitlecaseLetter => true,
+                UnicodeCategory.ModifierLetter => true,
+                UnicodeCategory.OtherLetter => true,
+                UnicodeCategory.LetterNumber => true,
+                _ => false
+            };
+
+        public static bool IsIdentifierCharacter(char ch) =>
+            char.GetUnicodeCategory(ch) switch
+            {
+                UnicodeCategory.UppercaseLetter => true,
+                UnicodeCategory.LowercaseLetter => true,
+                UnicodeCategory.TitlecaseLetter => true,
+                UnicodeCategory.ModifierLetter => true,
+                UnicodeCategory.OtherLetter => true,
+                UnicodeCategory.LetterNumber => true,
+                UnicodeCategory.DecimalDigitNumber => true,
+                UnicodeCategory.NonSpacingMark => true,
+                UnicodeCategory.SpacingCombiningMark => true,
+                UnicodeCategory.ConnectorPunctuation => true,
+                _ => false
+            };
+
+        public static bool IsNumeric(char ch) => ch >= '0' && ch <= '9';
+
+        public static bool IsHexNumeric(char ch) => IsNumeric(ch) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F');
+
+        private static Token ScanWhitespace(TextCursor cursor)
+        {
+            while (cursor.Advance() && IsWhitespace(cursor.Current))
+            {
             }
 
-            return new Token(TokenType.Whitespace, start..offset);
+            return cursor.CreateToken(TokenType.Whitespace);
         }
 
-        private static Token ScanLineTerminator(ReadOnlySpan<char> text, int offset)
+        private static Token ScanLineTerminator(TextCursor cursor)
         {
-            int ch = text[offset];
-            var start = offset++;
+            var first = cursor.Current;
 
-            if (ch == '\r' && offset < text.Length && text[offset] == '\n')
+            if (cursor.Advance() && first == '\r' && cursor.Current == '\n')
             {
-                offset++;
+                _ = cursor.Advance();
             }
 
-            return new Token(TokenType.LineTerminator, start..offset);
+            return cursor.CreateToken(TokenType.LineTerminator);
         }
 
-        private static Token ScanComment(ReadOnlySpan<char> text, int offset)
+        private static Token ScanComment(TextCursor cursor)
         {
-            var start = offset++;
-
-            while (offset < text.Length && !IsNewLine(text[offset]))
+            while (cursor.Advance() && !IsNewLine(cursor.Current))
             {
-                offset++;
             }
 
-            return new Token(TokenType.Comment, start..offset);
+            return cursor.CreateToken(TokenType.Comment);
         }
 
-        private static Token ScanPunctuator(int offset, TokenType tokenType) => new Token(tokenType, offset..(offset + 1));
+        private static Token ScanOperator(TextCursor cursor)
+        {
+            while (cursor.Advance() && IsOperator(cursor.Current))
+            {
+            }
+
+            return cursor.CreateToken(TokenType.Operator);
+        }
+
+        private static Token ScanIdentifier(TextCursor cursor)
+        {
+            while (cursor.Advance() && IsIdentifierCharacter(cursor.Current))
+            {
+            }
+
+            return cursor.CreateToken(TokenType.Identifier);
+        }
+
+        private static Token ScanNumericLiteral(TextCursor cursor)
+        {
+            var startsWithZero = cursor.Current == '0';
+
+            while (cursor.Advance() && IsNumeric(cursor.Current))
+            {
+            }
+
+            if (startsWithZero && cursor.Length == 1 && (cursor.Current == 'x' || cursor.Current == 'X'))
+            {
+                if (!cursor.Advance() || !IsHexNumeric(cursor.Current))
+                {
+                    // 0x is not a valid token.
+                    return cursor.CreateToken(TokenType.Error);
+                }
+
+                while (cursor.Advance() && IsHexNumeric(cursor.Current))
+                {
+                }
+
+                return cursor.CreateToken(TokenType.HexLiteral);
+            }
+
+
+        }
 
         public static Token Scan(ReadOnlySpan<char> text, int offset)
         {
-            if (offset >= text.Length)
+            var cursor = new TextCursor(text, offset);
+
+            if (cursor.AtEndOfSpan)
             {
-                return new Token(TokenType.EndOfText, text.Length..text.Length);
+                return cursor.CreateToken(TokenType.EndOfText);
             }
 
-            var ch = text[offset];
-
-            switch (ch)
+            switch (cursor.Current)
             {
                 case ' ':
                 case '\t': // U+0009 CHARACTER TABULATION (Tab)
                 case '\v': // U+000B LINE TABULATION (Vertical tab)
                 case '\f': // U+000C FORM FEED
-                    return ScanWhitespace(text, offset);
+                    return ScanWhitespace(cursor);
 
                 case '\n': // U+000A LINE FEED
                 case '\r': // U+000D CARRIAGE RETURN
-                    return ScanLineTerminator(text, offset);
+                    return ScanLineTerminator(cursor);
 
                 case '#':
-                    return ScanComment(text, offset);
+                    return ScanComment(cursor);
 
-                //case 'a':
-                //case 'b':
-                //case 'c':
-                //case 'd':
-                //case 'e':
-                //case 'f':
-                //case 'g':
-                //case 'h':
-                //case 'i':
-                //case 'j':
-                //case 'k':
-                //case 'l':
-                //case 'm':
-                //case 'n':
-                //case 'o':
-                //case 'p':
-                //case 'q':
-                //case 'r':
-                //case 's':
-                //case 't':
-                //case 'u':
-                //case 'v':
-                //case 'w':
-                //case 'x':
-                //case 'y':
-                //case 'z':
-                //case 'A':
-                //case 'B':
-                //case 'C':
-                //case 'D':
-                //case 'E':
-                //case 'F':
-                //case 'G':
-                //case 'H':
-                //case 'I':
-                //case 'J':
-                //case 'K':
-                //case 'L':
-                //case 'M':
-                //case 'N':
-                //case 'O':
-                //case 'P':
-                //case 'Q':
-                //case 'R':
-                //case 'S':
-                //case 'T':
-                //case 'U':
-                //case 'V':
-                //case 'W':
-                //case 'X':
-                //case 'Y':
-                //case 'Z':
-                //case '_':
-                //    return ScanIdentifier(text, offset);
+                case >= 'a' and <= 'z':
+                case >= 'A' and <= 'Z':
+                case '_':
+                    return ScanIdentifier(cursor);
 
-                //case '0':
-                //case '1':
-                //case '2':
-                //case '3':
-                //case '4':
-                //case '5':
-                //case '6':
-                //case '7':
-                //case '8':
-                //case '9':
-                //    return ScanNumericLiteral(text, offset);
+                case >= '0' and <= '9':
+                    return ScanNumericLiteral(cursor);
 
                 //case '\"':
-                //    return ScanStringLiteral(text, offset);
+                //    return ScanStringLiteral(cursor);
 
                 //case '`':
-                //    return ScanDomainSpecificLiteral(text, offset);
+                //    return ScanDomainSpecificLiteral(cursor);
 
                 case ',':
-                    return new Token(TokenType.Comma, offset..(offset + 1));
+                    _ = cursor.Advance();
+                    return cursor.CreateToken(TokenType.Comma);
 
                 case ':':
-                    return new Token(TokenType.Colon, offset..(offset + 1));
+                    _ = cursor.Advance();
+                    return cursor.CreateToken(TokenType.Colon);
 
                 case ';':
-                    return new Token(TokenType.Semicolon, offset..(offset + 1));
+                    _ = cursor.Advance();
+                    return cursor.CreateToken(TokenType.Semicolon);
 
                 case '(':
-                    return new Token(TokenType.OpenParen, offset..(offset + 1));
+                    _ = cursor.Advance();
+                    return cursor.CreateToken(TokenType.OpenParen);
 
                 case ')':
-                    return new Token(TokenType.CloseParen, offset..(offset + 1));
+                    _ = cursor.Advance();
+                    return cursor.CreateToken(TokenType.CloseParen);
 
                 case '{':
-                    return new Token(TokenType.OpenBrace, offset..(offset + 1));
+                    _ = cursor.Advance();
+                    return cursor.CreateToken(TokenType.OpenBrace);
 
                 case '}':
-                    return new Token(TokenType.CloseBrace, offset..(offset + 1));
+                    _ = cursor.Advance();
+                    return cursor.CreateToken(TokenType.CloseBrace);
 
                 case '[':
-                    return new Token(TokenType.OpenBracket, offset..(offset + 1));
+                    _ = cursor.Advance();
+                    return cursor.CreateToken(TokenType.OpenBracket);
 
                 case ']':
-                    return new Token(TokenType.CloseBracket, offset..(offset + 1));
+                    _ = cursor.Advance();
+                    return cursor.CreateToken(TokenType.CloseBracket);
 
-                //case '~':
-                //case '!':
-                //case '@':
-                //case '$':
-                //case '%':
-                //case '^':
-                //case '&':
-                //case '*':
-                //case '-':
-                //case '+':
-                //case '=':
-                //case '|':
-                //case '\\':
-                //case '<':
-                //case '>':
-                //case '.':
-                //case '/':
-                //case '?':
-                //    return ScanOperator(text, offset);
+                case '~':
+                case '!':
+                case '@':
+                case '$':
+                case '%':
+                case '^':
+                case '&':
+                case '*':
+                case '-':
+                case '+':
+                case '=':
+                case '|':
+                case '\\':
+                case '<':
+                case '>':
+                case '.':
+                case '/':
+                case '?':
+                    return ScanOperator(cursor);
 
-                //default:
-                //    if (CharacterInfo.IsIdentifierStartCharacter(character))
-                //    {
-                //        goto case 'a';
-                //    }
-
-                //    TextWindow.AdvanceChar();
-
-                //    if (_badTokenCount++ > 200)
-                //    {
-                //        // If we get too many characters that we cannot make sense of, absorb the rest of the input.
-                //        var position = TextWindow.Position - 1;
-                //        var end = TextWindow.Text.Length;
-                //        var width = end - position;
-                //        info.Text = TextWindow.Text.ToString(new TextSpan(position, width));
-                //        TextWindow.Reset(end);
-                //    }
-                //    else
-                //    {
-                //        info.Text = TextWindow.GetText(true);
-                //    }
-
-                //    AddError(ErrorCode.UnexpectedCharacterError, info.Text);
-                //    break;
-
-                default:
-                    if (ch > 127 && IsWhitespace(ch))
+                case > (char)127:
+                    if (IsWhitespace(cursor.Current))
                     {
                         goto case '\t';
                     }
 
-                    return new Token(TokenType.Error, -1..-1);
+                    if (IsIdentifierStartCharacter(cursor.Current))
+                    {
+                        return ScanIdentifier(cursor);
+                    }
+                    goto default;
+
+                default:
+                    return cursor.CreateToken(TokenType.Error);
             }
+        }
+
+        private ref struct TextCursor
+        {
+            private readonly int _start;
+            private readonly ReadOnlySpan<char> _span;
+            private int _current;
+
+            public Range Range => _start.._current;
+
+            public int Length => _current - _start;
+
+            public bool AtEndOfSpan => _current == _span.Length;
+
+            public char Current => AtEndOfSpan ? throw new InvalidOperationException() : _span[_current];
+
+            public bool Advance() => ++_current < _span.Length;
+
+            public TextCursor(ReadOnlySpan<char> span, int start)
+            {
+                _span = span;
+                _start = _current = start;
+            }
+
+            public Token CreateToken(TokenType type) => new Token(type, Range);
         }
     }
 }
