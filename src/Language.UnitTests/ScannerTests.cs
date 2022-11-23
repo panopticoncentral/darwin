@@ -22,10 +22,20 @@ namespace Darwin.Language.UnitTests
         }
 
         [Fact]
-        public void Whitespace() => Assert.Equal(GetAllTokens(" \t\r\n"), new[] { new Token(TokenType.Whitespace, 0..2), new Token(TokenType.LineTerminator, 2..4), new Token(TokenType.EndOfText, 4..4) });
+        public void Whitespace() => Assert.Equal(GetAllTokens(" \t\r\n"), new Token[] 
+        { 
+            new(TokenType.Whitespace, 0..2), 
+            new(TokenType.LineTerminator, 2..4), 
+            new(TokenType.EndOfText, 4..4) 
+        });
 
         [Fact]
-        public void Comments() => Assert.Equal(GetAllTokens("  # Now is the time"), new[] { new Token(TokenType.Whitespace, 0..2), new Token(TokenType.Comment, 2..19), new Token(TokenType.EndOfText, 19..19) });
+        public void Comments() => Assert.Equal(GetAllTokens("  # Now is the time"), new Token[] 
+        { 
+            new(TokenType.Whitespace, 0..2), 
+            new(TokenType.Comment, 2..19), 
+            new(TokenType.EndOfText, 19..19)
+        });
 
         [Fact]
         public void Punctuators() => Assert.Equal(GetAllTokens(",:;(){}[]"), new[]
@@ -58,14 +68,16 @@ namespace Darwin.Language.UnitTests
         });
 
         [Fact]
-        public void Identifiers() => Assert.Equal(GetAllTokens("abc abc123 _abc"), new[]
+        public void Identifiers() => Assert.Equal(GetAllTokens("abc abc123 _abc _"), new[]
         {
             new Token(TokenType.Identifier, 0..3),
             new Token(TokenType.Whitespace, 3..4),
             new Token(TokenType.Identifier, 4..10),
             new Token(TokenType.Whitespace, 10..11),
             new Token(TokenType.Identifier, 11..15),
-            new Token(TokenType.EndOfText, 15..15)
+            new Token(TokenType.Whitespace, 15..16),
+            new Token(TokenType.Identifier, 16..17),
+            new Token(TokenType.EndOfText, 17..17)
         });
     }
 }

@@ -1,10 +1,7 @@
 # Darwin Language Specification
 
-Version 1.0
-
-Draft 1
-
-Paul Vick
+## Version 1.0 (Draft 1)
+## Paul Vick
 
 <br/>
 
@@ -28,13 +25,13 @@ Paul Vick
 
 # <a name="1"></a>1 Introduction
 
-Darwin is a general purpose programming language for .NET Core. 
+Darwin is a general purpose programming language that targets the .NET platform. 
 
 ## <a name="1.1"></a>1.1 Grammar Notation
 
 This specification specifies a lexical and a syntatic grammar. Each grammar is defined using a set of *rules*. Each rule starts with a name followed by a colon and then a set of *productions*, one per line. The productions of a rule define the different possible ways to match the rule. For example the following: 
 
-```antlr
+```
 expression
   : literal
   | expression operator expression
@@ -45,17 +42,35 @@ defines a rule *expression* that either matches a single *literal* or an *expres
 
 A production contains a set of sequential *terms*. A term can be one of the following: 
 
-* **A string.** Strings are specified in quotes ('`if`') and match the given sequence of Unicode characters. 
+* **A character.** Unicode characters are specified in single quotes (`'a'`). A sequence of Unicode characters can be specified in double quotes and matches each character in sequence (i.e. `'i' 'f'` can also be written as `"if"`). The following escape sequences are allowed:
 
-* **A meta-string.** A meta-string is specified by angle brackets and describes the string matched informally. (For example, "< the Unicode value U+0000 >".) 
+  * `\x` followed by four hexadecimal digits in curly braces specifies the Unicode character point (i.e. `'\x{0061}'` is equvalent to `'a'`).
 
-* **A rule name.** A rule name is specified in *italics* and matches the rule named. 
+  * `\c` followed by a Unicode category name in curly braces matches any Unicode character in that category (i.e. `\c{Lu}`).
 
-* **A group.** A list of terms can be contained by parenthesis ("()") to allow multiple terms to be modified by repetition operators. 
+  * `\p` followed by a Unicode property name in curly braces matches any Unicode character with that property (i.e. `\p{White_Space}`).
 
-* **A range.** A range of character values can be specified by separating them with two dots (".."). 
+  * `\\` specifies the backslash character.
 
-Terms can be modified with the repetition operators "?", "+", and "\*". The operator "?" indicates a term is optional and can appear zero or one times. The operator "+" indicates a term must appear one or more times. And the operator "\*" indicates a term may appear zero or more times. 
+  * `\'` specifies the single quote character.
+
+  * `\"` specifies the double quote character.
+
+* **A rule name.** A name matches the rule named. 
+
+* **A group.** A list of terms can be contained by parenthesis ("()") to allow grouping multiple terms. 
+
+* **A range.** A range of character values can be specified by separating them with two dots (`..`). 
+
+Terms can be modified with the following operators:
+
+* The postfix operator `?` indicates a term is optional and can appear zero or one times.
+
+* The postfix operator `+` indicates a term must appear one or more times.
+
+* The postfix operator `*` indicates a term may appear zero or more times.
+
+* The prefix operator `!` matches anything except the following term.
 
 > **Note:** The grammars in this specification are not intended to be formal grammars (that is, usable by any particular parser or lexer generator). 
 
@@ -67,7 +82,7 @@ The first step in processing Darwin code is to translate a stream of Unicode cha
 
 > **Note:** All references to "Unicode" in this specification refer to Unicode version 8.0. 
 
-```antlr
+```
 start
   : token*
   ;
@@ -86,16 +101,14 @@ token
 
 *Whitespace* serves to separate tokens but has no other significance in the language. Whitespace is defined as any character with the Unicode property `White_Space`. A *line terminator* is whitespace that marks the lexical end of a line. 
 
-```antlr
+```
 whitespace
-  : <Any Unicode character with the property 'White_Space' except a line-terminator>
-  | line-terminator
+  : '\p{White_Space}'
   ;
 
 line-terminator
-  : <Carriage return character (U+000D)>
-  | <Line feed character (U+000A)>
-  | <Carriage return character (U+000D)> <Line feed character (U+000A)>
+  : '\u{000d}' '\u{000a}'?
+  | '\u{000a}'
   ;
 ```
 
@@ -103,13 +116,13 @@ line-terminator
 
 *Comments* are text that serve as comments on the source code and are treated as whitespace. A comment extends only until the next line terminator. 
 
-```antlr
+```
 comment
   : '#' comment-element*
   ;
 
 comment-element
-  : <Any Unicode character except a line-terminator.>
+  : !line-terminator
   ;
 ```
 
@@ -121,11 +134,13 @@ An *identifier* is a name. Darwin identifiers conform to the Unicode Standard An
 
 * **UAX31-R4**: Darwin normalizes identifiers using normalization form NFC. 
 
-Two things are worth noting regarding Darwin identifiers. First, unlike some languages, Unicode formatting characters are not allowed in identifiers to reduce the possibility of confusion between identical looking identifiers. Second, Darwin defines no reserved keywords. 
+Two things are worth noting regarding Darwin identifiers. First, unlike some languages, Unicode formatting characters are not allowed in identifiers to reduce the possibility of confusion between identical looking identifiers. Second, Darwin defines no reserved keywords.
 
-```antlr
+The identifier `_` is reserved by the language and can only be used in specific contexts.
+
+```
 identifier
-  : identifier-start identifier-character?
+  : identifier-start identifier-character*
   ;
 
 identifier-start
@@ -141,19 +156,25 @@ identifier-character
   ;
 
 letter-character
-  : <Unicode alphabetic character (classes Lu, Ll, Lt, Lm, Lo, Nl)>
+  : '\c{Lu}'
+  | '\c{Ll}'
+  | '\c{Lt}'
+  | '\c{Lm}'
+  | '\c{Lo}'
+  | '\c{Nl}'
   ;
 
 decimal-character
-  : <Unicode numeric character (class Nd)>
+  : '\c{Nd}'
   ;
 
 combining-character
-  : <Unicode mark character (classes Mn, Mc)>
+  : '\c{Mn}'
+  | '\c{Mc}'
   ;
 
 connector-character
-  : <Unicode connection character (class Pc)>
+  : '\c{Pc}'
   ;
 ```
 
@@ -161,7 +182,7 @@ connector-character
 
 A *literal* is a textual representation of a value. 
 
-```antlr
+```
 literal
   : integer-literal
   | floating-point-literal
@@ -174,9 +195,9 @@ literal
 
 An *integer literal* is a textual representation of an integral numeric value. Integer literals can either be specified in decimal (base 10) or hexadecimal (base 16) notation. Hexadecimal notation is prefixed by `0x` and uses the letters `a` through `f` to represent the additional digit values.
 
-Decimal notation may be followed by a *unit suffix* that specifies the units of the decimal value. No intrinsic meaning is assigned to unit suffixes at the lexical level.
+Decimal notation may be followed by a *unit suffix* that specifies the units of the decimal value. No meaning is assigned to unit suffixes at the lexical level.
 
-```antlr
+```
 integer-literal
   : decimal-literal
   | hexadecimal-literal
@@ -200,7 +221,7 @@ unit-suffix-character
   ;
 
 hexadecimal-literal
-  : '0x' hexadecimal-digit+
+  : '0' ('x' | 'X') hexadecimal-digit+
   ;
 
 hexadecimal-digit
@@ -214,76 +235,50 @@ hexadecimal-digit
 
 A *floating-point literal* is a textual representation of a real numeric value. Floating point literals may also have unit suffixes.
 
-```antlr
+```
 floating-point-literal
   : digit+ '.' digit+ exponent? unit-suffix?
   | digit+ exponent unit-suffix?
   ;
 
 exponent
-  : exponent-character sign? digit+
-  ;
-
-exponent-character
-  : 'e'
-  | 'E'
-  ;
-
-sign
-  : '+'
-  | '-'
+  : ('e' | 'E') ('+' | '-')? digit+
   ;
 ```
 
 ### <a name="2.4.3"></a>2.4.3 String Literals
 
-A *string literal* is a textual representation of a string value. String literals are delimited by double quotes (`"`), although double quotes can be represented in the string literal by two double quotes in a row (i.e. the string literal `"""Hello, world!"" she said."` represents the string `"Hello, world!" she said.`). 
+A *string literal* is a textual representation of a string value. String literals are delimited by double quotes (`"`), although double quotes can be represented in the string literal by two double quotes in a row (i.e. the string literal `"""Hello, world!"" she said."` represents the string `"Hello, world!" she said.`). String literals can contain any Unicode character, including line terminators.
 
 String literals support *expression holes*. An expression hole is delimited by a dollar sign followed by curly braces (`${}`) and contains a Darwin expression. The behavior of expression holes is described later in this specification. 
 
-```antlr
+```
 string-literal
   : '"' string-literal-element* '"'
   ;
 
 string-literal-element
-  : string-literal-character
-  | string-literal-hole
-  ;
-
-string-literal-character
-  : <Any character except a double quote, open brace, or close brace.>
+  : !('"' | "${")
   | '"' '"'
-  ;
-
-string-literal-hole
-  : '${' token+ '}'
+  | "${" token+ '}'
   ;
 ```
 
 ### <a name="2.4.4"></a>2.4.4 Domain-Specific Literals
 
-A *domain-specific literal* is a literal whose language is not part of the Darwin language. For example, an XML literal or a JSON literal could be expressed using a domain-specific literal. Domain specific literals are delimited by backticks (```) and can contain any Unicode character, including line terminators. Inside of a domain-specific literal, a backtick can be represented by two backticks (````). 
+A *domain-specific literal* is a literal whose language is not part of the Darwin language. For example, an XML literal or a JSON literal could be expressed using a domain-specific literal. Domain specific literals are delimited by backticks (`) and can contain any Unicode character, including line terminators. Inside of a domain-specific literal, a backtick can be represented by two backticks (``). 
 
-Like string literals, domain-specific literals support expression holes. An expression hole is delimited by a dollar sign followed by curly braces (`${}`) and contains a Darwin expression. The behavior of expression holes is described later in this specification. 
+Like string literals, domain-specific literals support expression holes. An expression hole is delimited by a dollar sign followed by curly braces (`${}`) and contains a Darwin expression. The behavior of expression holes is described later in this specification.
 
-```antlr
+```
 domain-specific-literal
   : '`' domain-specific-literal-element* '`'
   ;
 
 domain-specific-literal-element
-  : domain-specific-literal-character
-  | domain-specific-literal-hole
-  ;
-
-domain-specific-literal-character
-  : <Any character except a back tick (`).>
+  : !('`' | "${")
   | '`' '`'
-  ;
-
-domain-specific-literal-hole
-  : '${' token+ '}'
+  | "${" token+ '}'
   ;
 ```
 
@@ -291,9 +286,7 @@ domain-specific-literal-hole
 
 A *punctuator* serves to delimit syntatic structures. 
 
-> **Note:** Some operators are also used as punctuators in the syntactic language. 
-
-```antlr
+```
 punctuator
   : '('
   | ')'
@@ -311,7 +304,7 @@ punctuator
 
 An *operator* specifies an operation in the language. 
 
-```antlr
+```
 operator
   : operators+
   ;

@@ -116,31 +116,31 @@ namespace Darwin.Language
             return cursor.CreateToken(TokenType.Identifier);
         }
 
-        private static Token ScanNumericLiteral(TextCursor cursor)
-        {
-            var startsWithZero = cursor.Current == '0';
+        //private static Token ScanNumericLiteral(TextCursor cursor)
+        //{
+        //    var startsWithZero = cursor.Current == '0';
 
-            while (cursor.Advance() && IsNumeric(cursor.Current))
-            {
-            }
+        //    while (cursor.Advance() && IsNumeric(cursor.Current))
+        //    {
+        //    }
 
-            if (startsWithZero && cursor.Length == 1 && (cursor.Current == 'x' || cursor.Current == 'X'))
-            {
-                if (!cursor.Advance() || !IsHexNumeric(cursor.Current))
-                {
-                    // 0x is not a valid token.
-                    return cursor.CreateToken(TokenType.Error);
-                }
+        //    if (startsWithZero && cursor.Length == 1 && (cursor.Current == 'x' || cursor.Current == 'X'))
+        //    {
+        //        if (!cursor.Advance() || !IsHexNumeric(cursor.Current))
+        //        {
+        //            // 0x is not a valid token.
+        //            return cursor.CreateToken(TokenType.Error);
+        //        }
 
-                while (cursor.Advance() && IsHexNumeric(cursor.Current))
-                {
-                }
+        //        while (cursor.Advance() && IsHexNumeric(cursor.Current))
+        //        {
+        //        }
 
-                return cursor.CreateToken(TokenType.HexLiteral);
-            }
+        //        return cursor.CreateToken(TokenType.HexLiteral);
+        //    }
 
 
-        }
+        //}
 
         public static Token Scan(ReadOnlySpan<char> text, int offset)
         {
@@ -171,8 +171,8 @@ namespace Darwin.Language
                 case '_':
                     return ScanIdentifier(cursor);
 
-                case >= '0' and <= '9':
-                    return ScanNumericLiteral(cursor);
+                //case >= '0' and <= '9':
+                //    return ScanNumericLiteral(cursor);
 
                 //case '\"':
                 //    return ScanStringLiteral(cursor);
