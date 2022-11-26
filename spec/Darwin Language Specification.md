@@ -195,8 +195,6 @@ literal
 
 An *integer literal* is a textual representation of an integral numeric value. Integer literals can either be specified in decimal (base 10) or hexadecimal (base 16) notation. Hexadecimal notation is prefixed by `0x` and uses the letters `a` through `f` to represent the additional digit values.
 
-Decimal notation may be followed by a *unit suffix* that specifies the units of the decimal value. No meaning is assigned to unit suffixes at the lexical level.
-
 ```
 integer-literal
   : decimal-literal
@@ -204,20 +202,11 @@ integer-literal
   ;
 
 decimal-literal
-  : digit+ unit-suffix?
+  : digit+
   ;
 
 digit
   : '0'..'9'
-  ;
-
-unit-suffix
-  : unit-suffix-character+
-  ;
-
-unit-suffix-character
-  : 'a'..'z'
-  | 'A'..'Z'
   ;
 
 hexadecimal-literal
@@ -233,12 +222,12 @@ hexadecimal-digit
 
 ### <a name="2.4.2"></a>2.4.2 Floating-Point Literals
 
-A *floating-point literal* is a textual representation of a real numeric value. Floating point literals may also have unit suffixes.
+A *floating-point literal* is a textual representation of a real numeric value.
 
 ```
 floating-point-literal
-  : digit+ '.' digit+ exponent? unit-suffix?
-  | digit+ exponent unit-suffix?
+  : digit+ '.' digit+ exponent?
+  | digit+ exponent
   ;
 
 exponent

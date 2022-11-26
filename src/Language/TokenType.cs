@@ -18,6 +18,8 @@
         CloseBracket,
         Operator,
         Identifier,
-        HexLiteral
+        DecimalLiteral,
+        HexadecimalLiteral,
+        FloatingPointLiteral
     }
 }

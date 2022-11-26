@@ -116,31 +116,90 @@ namespace Darwin.Language
             return cursor.CreateToken(TokenType.Identifier);
         }
 
-        //private static Token ScanNumericLiteral(TextCursor cursor)
-        //{
-        //    var startsWithZero = cursor.Current == '0';
+        private static Token ScanNumericLiteral(TextCursor cursor)
+        {
+            if (!cursor.Advance())
+            {
+                return cursor.CreateToken(TokenType.DecimalLiteral);
+            }
 
-        //    while (cursor.Advance() && IsNumeric(cursor.Current))
-        //    {
-        //    }
+            if (cursor.Current == 'x' || cursor.Current == 'X')
+            {
+                if (!cursor.Advance() || !IsHexNumeric(cursor.Current))
+                {
+                    // 0x is not a valid token.
+                    return cursor.CreateToken(TokenType.Error);
+                }
 
-        //    if (startsWithZero && cursor.Length == 1 && (cursor.Current == 'x' || cursor.Current == 'X'))
-        //    {
-        //        if (!cursor.Advance() || !IsHexNumeric(cursor.Current))
-        //        {
-        //            // 0x is not a valid token.
-        //            return cursor.CreateToken(TokenType.Error);
-        //        }
+                while (cursor.Advance() && IsHexNumeric(cursor.Current))
+                {
+                }
 
-        //        while (cursor.Advance() && IsHexNumeric(cursor.Current))
-        //        {
-        //        }
+                return cursor.CreateToken(TokenType.HexadecimalLiteral);
+            }
 
-        //        return cursor.CreateToken(TokenType.HexLiteral);
-        //    }
+            while (IsNumeric(cursor.Current))
+            {
+                if (!cursor.Advance())
+                {
+                    return cursor.CreateToken(TokenType.DecimalLiteral);
+                }
+            }
 
+            var decimalEnd = cursor.Location;
+            if (cursor.Current == '.')
+            {
+                if (!cursor.Advance() || !IsNumeric(cursor.Current))
+                {
+                    cursor.Move(decimalEnd);
+                    return cursor.CreateToken(tokenType);
+                }
 
-        //}
+                tokenType = TokenType.FloatingPointLiteral;
+                while (IsNumeric(cursor.Current))
+                {
+                    if (!cursor.Advance())
+                    {
+                        return cursor.CreateToken(tokenType);
+                    }
+                }
+            }
+
+            var floatingPointEnd = cursor.Location;
+            if (cursor.Current == 'e' || cursor.Current == 'E')
+            {
+                tokenType = TokenType.FloatingPointLiteral;
+
+                if (!cursor.Advance())
+                {
+                    return cursor.CreateToken(TokenType.Error);
+                }
+
+                if (cursor.Current == '+' || cursor.Current == '-')
+                {
+                    if (!cursor.Advance())
+                    {
+                        return cursor.CreateToken(TokenType.Error);
+                    }
+                }
+
+                while (IsNumeric(cursor.Current))
+                {
+                    if (!cursor.Advance())
+                    {
+                        return cursor.CreateToken(tokenType);
+                    }
+                }
+            }
+
+            while (((cursor.Current >= 'A' && cursor.Current <= 'Z')
+                || (cursor.Current >= 'a' && cursor.Current <= 'z')) 
+                && cursor.Advance())
+            {
+            }
+
+            return cursor.CreateToken(tokenType);
+        }
 
         public static Token Scan(ReadOnlySpan<char> text, int offset)
         {
@@ -171,8 +230,8 @@ namespace Darwin.Language
                 case '_':
                     return ScanIdentifier(cursor);
 
-                //case >= '0' and <= '9':
-                //    return ScanNumericLiteral(cursor);
+                case >= '0' and <= '9':
+                    return ScanNumericLiteral(cursor);
 
                 //case '\"':
                 //    return ScanStringLiteral(cursor);
@@ -257,25 +316,30 @@ namespace Darwin.Language
         {
             private readonly int _start;
             private readonly ReadOnlySpan<char> _span;
-            private int _current;
 
-            public Range Range => _start.._current;
+            public Range Range => _start..Location;
 
-            public int Length => _current - _start;
+            public int Location { get; private set; }
 
-            public bool AtEndOfSpan => _current == _span.Length;
+            public int Length => Location - _start;
 
-            public char Current => AtEndOfSpan ? throw new InvalidOperationException() : _span[_current];
+            public bool AtEndOfSpan => Location == _span.Length;
 
-            public bool Advance() => ++_current < _span.Length;
+            public char Current => AtEndOfSpan ? throw new InvalidOperationException() : _span[Location];
+
+            public char? Peek() => (AtEndOfSpan || Location == _span.Length - 1) ? null : _span[Location + 1];
+
+            public bool Advance() => ++Location < _span.Length;
+
+            public void Move(int location) => Location = location;
 
             public TextCursor(ReadOnlySpan<char> span, int start)
             {
                 _span = span;
-                _start = _current = start;
+                _start = Location = start;
             }
 
-            public Token CreateToken(TokenType type) => new Token(type, Range);
+            public Token CreateToken(TokenType type) => new(type, Range);
         }
     }
 }
