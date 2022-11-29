@@ -146,5 +146,41 @@ namespace Darwin.Language.UnitTests
             new(TokenType.Identifier, 8..9),
             new(TokenType.EndOfText, 9..9)
         });
+
+        [Fact]
+        public void StringLiteral() => Assert.Equal(GetAllTokens("\"abc\" \"abc\r\ndef\" \"a\"\"b\""), new Token[]
+        {
+            new(TokenType.StringLiteral, 0..5),
+            new(TokenType.Whitespace, 5..6),
+            new(TokenType.StringLiteral, 6..16),
+            new(TokenType.Whitespace, 16..17),
+            new(TokenType.StringLiteral, 17..23),
+            new(TokenType.EndOfText, 23..23)
+        });
+
+        [Fact]
+        public void BadStringLiteral() => Assert.Equal(GetAllTokens("\"abc"), new Token[]
+        {
+            new(TokenType.Error, 0..4),
+            new(TokenType.EndOfText, 4..4)
+        });
+
+        [Fact]
+        public void DomainSpecificLiteral() => Assert.Equal(GetAllTokens("`abc` `abc\r\ndef` `a``b`"), new Token[]
+        {
+            new(TokenType.DomainSpecificLiteral, 0..5),
+            new(TokenType.Whitespace, 5..6),
+            new(TokenType.DomainSpecificLiteral, 6..16),
+            new(TokenType.Whitespace, 16..17),
+            new(TokenType.DomainSpecificLiteral, 17..23),
+            new(TokenType.EndOfText, 23..23)
+        });
+
+        [Fact]
+        public void BadDomainSpecificLiteral() => Assert.Equal(GetAllTokens("`abc"), new Token[]
+        {
+            new(TokenType.Error, 0..4),
+            new(TokenType.EndOfText, 4..4)
+        });
     }
 }

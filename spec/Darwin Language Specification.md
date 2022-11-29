@@ -239,17 +239,14 @@ exponent
 
 A *string literal* is a textual representation of a string value. String literals are delimited by double quotes (`"`), although double quotes can be represented in the string literal by two double quotes in a row (i.e. the string literal `"""Hello, world!"" she said."` represents the string `"Hello, world!" she said.`). String literals can contain any Unicode character, including line terminators.
 
-String literals support *expression holes*. An expression hole is delimited by a dollar sign followed by curly braces (`${}`) and contains a Darwin expression. The behavior of expression holes is described later in this specification. 
-
 ```
 string-literal
   : '"' string-literal-element* '"'
   ;
 
 string-literal-element
-  : !('"' | "${")
+  : !'"'
   | '"' '"'
-  | "${" token+ '}'
   ;
 ```
 
@@ -257,17 +254,14 @@ string-literal-element
 
 A *domain-specific literal* is a literal whose language is not part of the Darwin language. For example, an XML literal or a JSON literal could be expressed using a domain-specific literal. Domain specific literals are delimited by backticks (`) and can contain any Unicode character, including line terminators. Inside of a domain-specific literal, a backtick can be represented by two backticks (``). 
 
-Like string literals, domain-specific literals support expression holes. An expression hole is delimited by a dollar sign followed by curly braces (`${}`) and contains a Darwin expression. The behavior of expression holes is described later in this specification.
-
 ```
 domain-specific-literal
   : '`' domain-specific-literal-element* '`'
   ;
 
 domain-specific-literal-element
-  : !('`' | "${")
+  : !'`'
   | '`' '`'
-  | "${" token+ '}'
   ;
 ```
 

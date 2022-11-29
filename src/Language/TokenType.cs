@@ -20,6 +20,8 @@
         Identifier,
         DecimalLiteral,
         HexadecimalLiteral,
-        FloatingPointLiteral
+        FloatingPointLiteral,
+        StringLiteral,
+        DomainSpecificLiteral
     }
 }

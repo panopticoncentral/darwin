@@ -197,6 +197,32 @@ namespace Darwin.Language
             return cursor.CreateToken(isFloatingPoint ? TokenType.FloatingPointLiteral :TokenType.DecimalLiteral);
         }
 
+        private static Token ScanStringLiteral(TextCursor cursor)
+        {
+            while (cursor.Advance())
+            {
+                if (cursor.Current == '"' && (!cursor.Advance() || cursor.Current != '"'))
+                {
+                    return cursor.CreateToken(TokenType.StringLiteral);
+                }
+            }
+
+            return cursor.CreateToken(TokenType.Error);
+        }
+
+        private static Token ScanDomainSpecificLiteral(TextCursor cursor)
+        {
+            while (cursor.Advance())
+            {
+                if (cursor.Current == '`' && (!cursor.Advance() || cursor.Current != '`'))
+                {
+                    return cursor.CreateToken(TokenType.DomainSpecificLiteral);
+                }
+            }
+
+            return cursor.CreateToken(TokenType.Error);
+        }
+
         public static Token Scan(ReadOnlySpan<char> text, int offset)
         {
             var cursor = new TextCursor(text, offset);
@@ -229,11 +255,11 @@ namespace Darwin.Language
                 case >= '0' and <= '9':
                     return ScanNumericLiteral(cursor);
 
-                //case '\"':
-                //    return ScanStringLiteral(cursor);
+                case '\"':
+                    return ScanStringLiteral(cursor);
 
-                //case '`':
-                //    return ScanDomainSpecificLiteral(cursor);
+                case '`':
+                    return ScanDomainSpecificLiteral(cursor);
 
                 case ',':
                     _ = cursor.Advance();
