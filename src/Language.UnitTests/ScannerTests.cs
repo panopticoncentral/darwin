@@ -81,17 +81,12 @@ namespace Darwin.Language.UnitTests
         });
 
         [Fact]
-        public void DecimalLiteral() => Assert.Equal(GetAllTokens("1 123 123fpm 491mph123abc"), new Token[]
+        public void DecimalLiteral() => Assert.Equal(GetAllTokens("1 123"), new Token[]
         {
             new(TokenType.DecimalLiteral, 0..1),
             new(TokenType.Whitespace, 1..2),
             new(TokenType.DecimalLiteral, 2..5),
-            new(TokenType.Whitespace, 5..6),
-            new(TokenType.DecimalLiteral, 6..12),
-            new(TokenType.Whitespace, 12..13),
-            new(TokenType.DecimalLiteral, 13..19),
-            new(TokenType.DecimalLiteral, 19..25),
-            new(TokenType.EndOfText, 25..25)
+            new(TokenType.EndOfText, 5..5)
         });
 
         [Fact]
@@ -110,10 +105,11 @@ namespace Darwin.Language.UnitTests
         [Fact]
         public void BadHexLiteral() => Assert.Equal(GetAllTokens("0x 0xg"), new Token[]
         {
-            new(TokenType.Error, 0..2),
+            new(TokenType.DecimalLiteral, 0..1),
+            new(TokenType.Identifier, 1..2),
             new(TokenType.Whitespace, 2..3),
-            new(TokenType.Error, 3..5),
-            new(TokenType.Identifier, 5..6),
+            new(TokenType.DecimalLiteral, 3..4),
+            new(TokenType.Identifier, 4..6),
             new(TokenType.EndOfText, 6..6)
         });
 
@@ -139,13 +135,16 @@ namespace Darwin.Language.UnitTests
         [Fact]
         public void BadFloatingPointLiteral() => Assert.Equal(GetAllTokens("0. 0.a 0e"), new Token[]
         {
-            new(TokenType.Error, 0..2),
+            new(TokenType.DecimalLiteral, 0..1),
+            new(TokenType.Operator, 1..2),
             new(TokenType.Whitespace, 2..3),
             new(TokenType.DecimalLiteral, 3..4),
             new(TokenType.Operator, 4..5),
             new(TokenType.Identifier, 5..6),
             new(TokenType.Whitespace, 6..7),
-            new(TokenType.EndOfText, 6..6)
+            new(TokenType.DecimalLiteral, 7..8),
+            new(TokenType.Identifier, 8..9),
+            new(TokenType.EndOfText, 9..9)
         });
     }
 }

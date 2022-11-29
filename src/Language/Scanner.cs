@@ -118,24 +118,28 @@ namespace Darwin.Language
 
         private static Token ScanNumericLiteral(TextCursor cursor)
         {
+            var leadingZero = cursor.Current == '0';
+
             if (!cursor.Advance())
             {
                 return cursor.CreateToken(TokenType.DecimalLiteral);
             }
 
-            if (cursor.Current == 'x' || cursor.Current == 'X')
+            var location = cursor.Location;
+            if (leadingZero 
+                && (cursor.Current == 'x' || cursor.Current == 'X')
+                && cursor.Advance()
+                && IsHexNumeric(cursor.Current))
             {
-                if (!cursor.Advance() || !IsHexNumeric(cursor.Current))
-                {
-                    // 0x is not a valid token.
-                    return cursor.CreateToken(TokenType.Error);
-                }
-
                 while (cursor.Advance() && IsHexNumeric(cursor.Current))
                 {
                 }
 
                 return cursor.CreateToken(TokenType.HexadecimalLiteral);
+            }
+            else
+            {
+                cursor.Move(location);
             }
 
             while (IsNumeric(cursor.Current))
@@ -146,59 +150,51 @@ namespace Darwin.Language
                 }
             }
 
-            var decimalEnd = cursor.Location;
-            if (cursor.Current == '.')
+            var isFloatingPoint = false;
+            location = cursor.Location;
+
+            if (cursor.Current == '.'
+                && cursor.Advance()
+                && IsNumeric(cursor.Current))
             {
-                if (!cursor.Advance() || !IsNumeric(cursor.Current))
-                {
-                    cursor.Move(decimalEnd);
-                    return cursor.CreateToken(tokenType);
-                }
-
-                tokenType = TokenType.FloatingPointLiteral;
-                while (IsNumeric(cursor.Current))
-                {
-                    if (!cursor.Advance())
-                    {
-                        return cursor.CreateToken(tokenType);
-                    }
-                }
-            }
-
-            var floatingPointEnd = cursor.Location;
-            if (cursor.Current == 'e' || cursor.Current == 'E')
-            {
-                tokenType = TokenType.FloatingPointLiteral;
-
-                if (!cursor.Advance())
-                {
-                    return cursor.CreateToken(TokenType.Error);
-                }
-
-                if (cursor.Current == '+' || cursor.Current == '-')
-                {
-                    if (!cursor.Advance())
-                    {
-                        return cursor.CreateToken(TokenType.Error);
-                    }
-                }
+                isFloatingPoint = true;
 
                 while (IsNumeric(cursor.Current))
                 {
                     if (!cursor.Advance())
                     {
-                        return cursor.CreateToken(tokenType);
+                        return cursor.CreateToken(TokenType.FloatingPointLiteral);
                     }
                 }
             }
-
-            while (((cursor.Current >= 'A' && cursor.Current <= 'Z')
-                || (cursor.Current >= 'a' && cursor.Current <= 'z')) 
-                && cursor.Advance())
+            else
             {
+                cursor.Move(location);
             }
 
-            return cursor.CreateToken(tokenType);
+            location = cursor.Location;
+            if ((cursor.Current == 'e' || cursor.Current == 'E')
+                && cursor.Advance()
+                && (IsNumeric(cursor.Current)
+                    || ((cursor.Current == '+' || cursor.Current == '-')
+                        && cursor.Advance()
+                        && IsNumeric(cursor.Current))))
+            {
+                isFloatingPoint = true;
+                while (IsNumeric(cursor.Current))
+                {
+                    if (!cursor.Advance())
+                    {
+                        return cursor.CreateToken(TokenType.FloatingPointLiteral);
+                    }
+                }
+            }
+            else
+            {
+                cursor.Move(location);
+            }
+
+            return cursor.CreateToken(isFloatingPoint ? TokenType.FloatingPointLiteral :TokenType.DecimalLiteral);
         }
 
         public static Token Scan(ReadOnlySpan<char> text, int offset)
